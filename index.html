@@ -118,7 +118,7 @@ select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #2a3a
 <script>
 let DATA = null;
 let currentTeam = '';
-let currentThreshold = 0.025;
+let currentThreshold = 0.012;
 let currentStates = [];
 let currentIdx = 0;
 
@@ -354,7 +354,7 @@ function miniPitch(gx, gy, color) {
 function selectCategory(cat) {
   const results = document.getElementById('cat-results');
   if (!cat) { results.innerHTML = ''; return; }
-  const highThresh = DATA.thresholds[2];
+  const highThresh = DATA.thresholds[1];
   let entries = [];
   for (const [team, states] of Object.entries(DATA.teams)) {
     states.filter(s => s.c0 === cat && s.n >= 5 && Math.abs(s.a) >= highThresh).forEach(s => entries.push({ team, ...s }));
