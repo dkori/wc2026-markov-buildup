@@ -395,13 +395,18 @@ function goToTeam(team) {
 }
 
 function goToTeamHigh(team, state) {
-  currentThreshold = DATA.thresholds[0];
-  document.querySelectorAll('.thresh-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-t') == DATA.thresholds[0]));
   switchTabDirect('team');
   document.getElementById('team-select').value = team;
   selectTeam(team);
   if (state) {
-    const idx = currentStates.findIndex(s => s.s === state);
+    let idx = currentStates.findIndex(s => s.s === state);
+    if (idx < 0) {
+      // State not visible at current threshold — drop to Low
+      currentThreshold = DATA.thresholds[0];
+      document.querySelectorAll('.thresh-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-t') == DATA.thresholds[0]));
+      selectTeam(team);
+      idx = currentStates.findIndex(s => s.s === state);
+    }
     if (idx >= 0) showCardAt(idx);
   }
 }
