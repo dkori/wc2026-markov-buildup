@@ -125,16 +125,23 @@ let currentIdx = 0;
 fetch('data/teams.json').then(r => r.json()).then(d => {
   DATA = d;
   const sel = document.getElementById('team-select');
-  d.available_teams.forEach(t => {
+  // Sort teams by GG+ descending
+  const sortedTeams = [...d.available_teams].sort((a, b) => (d.gplus[b] || -999) - (d.gplus[a] || -999));
+  sortedTeams.forEach(t => {
     const opt = document.createElement('option');
-    opt.value = t; opt.textContent = t + (d.teams[t] ? '' : ' (no data)');
+    const gp = d.gplus[t];
+    const gpStr = gp != null ? ` (${gp >= 0 ? '+' : ''}${gp.toFixed(2)})` : '';
+    opt.value = t; opt.textContent = t + gpStr + (d.teams[t] ? '' : ' — no data');
     if (!d.teams[t]) opt.disabled = true;
     sel.appendChild(opt);
   });
   const catSel = document.getElementById('cat-select');
+  const midThresh = d.thresholds[1];
   d.categories.forEach(c => {
+    const hasEntries = Object.values(d.teams).some(states => states.some(s => s.c0 === c && Math.abs(s.a) >= midThresh));
     const opt = document.createElement('option');
-    opt.value = c; opt.textContent = c;
+    opt.value = c; opt.textContent = c + (hasEntries ? '' : ' (none)');
+    if (!hasEntries) opt.style.color = '#666';
     catSel.appendChild(opt);
   });
   const tDiv = document.getElementById('thresh-btns');
