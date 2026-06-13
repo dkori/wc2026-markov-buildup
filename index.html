@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Goldfish G+ | WC 2026 (Buildup)</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1923; color: #e0e0e0; padding: 12px; max-width: 600px; margin: 0 auto; }
+h1 { font-size: 20px; margin-bottom: 4px; color: #fff; }
+.subtitle { font-size: 11px; color: #888; margin-bottom: 12px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+.tab { flex: 1; padding: 8px; text-align: center; background: #1a2634; border: 1px solid #2a3a4a; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.tab.active { background: #e94560; border-color: #e94560; color: #fff; font-weight: 600; }
+select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #2a3a4a; background: #1a2634; color: #e0e0e0; font-size: 14px; margin-bottom: 12px; -webkit-appearance: none; }
+.threshold-btns { display: flex; gap: 6px; margin-bottom: 12px; }
+.thresh-btn { flex: 1; padding: 6px; text-align: center; background: #1a2634; border: 1px solid #2a3a4a; border-radius: 4px; cursor: pointer; font-size: 11px; }
+.thresh-btn.active { background: #e94560; border-color: #e94560; color: #fff; }
+.pitch-container { position: relative; width: 100%; aspect-ratio: 3/2; background: #2d5a27; border-radius: 6px; overflow: hidden; margin-bottom: 8px; border: 2px solid #3a7a34; }
+.pitch-svg { width: 100%; height: 100%; }
+.cell { cursor: pointer; transition: opacity 0.15s; }
+.legend { display: flex; gap: 12px; justify-content: center; font-size: 10px; margin-bottom: 12px; color: #aaa; }
+.legend span { display: inline-flex; align-items: center; gap: 3px; }
+.legend .dot { width: 8px; height: 8px; border-radius: 2px; }
+.card { background: #1a2634; border: 1px solid #2a3a4a; border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.card-title { font-size: 15px; font-weight: 600; }
+.card-badge { font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: 600; }
+.card-badge.strength { background: #3498db33; color: #3498db; }
+.card-badge.weakness { background: #e74c3c33; color: #e74c3c; }
+.card-meta { font-size: 11px; color: #888; margin-bottom: 10px; }
+.seq { font-size: 12px; color: #ccc; margin: 6px 0; padding: 6px 8px; background: #0f1923; border-radius: 4px; line-height: 1.5; }
+.seq .arrow { color: #e94560; font-weight: bold; }
+.seq .opp { color: #888; font-style: italic; }
+.seq .meta { color: #666; font-size: 10px; display: block; margin-top: 2px; }
+.seq-container { max-height: 280px; overflow-y: auto; border-radius: 6px; }
+.nav-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 12px; }
+.nav-dot { width: 8px; height: 8px; border-radius: 50%; background: #2a3a4a; cursor: pointer; }
+.nav-dot.active { background: #e94560; }
+.nav-dot.strength { border: 1px solid #3498db; }
+.nav-dot.weakness { border: 1px solid #e74c3c; }
+.nav-arrows { display: flex; justify-content: space-between; margin-bottom: 12px; }
+.nav-btn { padding: 8px 16px; background: #1a2634; border: 1px solid #2a3a4a; border-radius: 6px; cursor: pointer; color: #e0e0e0; font-size: 13px; }
+.nav-btn:disabled { opacity: 0.3; cursor: default; }
+.no-data { text-align: center; color: #666; padding: 40px; }
+.cat-team { font-size: 13px; padding: 8px 0; border-bottom: 1px solid #1e2e3e; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.cat-team:hover { background: #1e2e3e; }
+.cat-team .adv { font-weight: 600; font-size: 12px; }
+.fixture { background: #1a2634; border: 1px solid #2a3a4a; border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 4px; }
+.fixture .team-block { text-align: center; }
+.fixture .team-block:first-child { text-align: left; }
+.fixture .team-block:last-child { text-align: right; }
+.fixture .vs-block { text-align: center; color: #666; font-size: 11px; padding: 0 6px; }
+.fixture .team-name { cursor: pointer; font-size: 13px; display: block; }
+.fixture .team-name.has-data { color: #fff; font-weight: 600; }
+.fixture .meta { font-size: 10px; color: #666; display: block; }
+.group-header { font-size: 12px; color: #e94560; margin: 12px 0 6px; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>🐠 Goldfish G+ <span style="font-size:14px;color:#888">(Buildup)</span></h1>
+<p class="subtitle">Memoryless Markov transition model · WC 2026</p>
+<p style="font-size:10px;color:#b8860b;margin-bottom:8px;line-height:1.5;background:#b8860b15;padding:6px 8px;border-radius:4px">⚠️ Proof of concept — <strong>Buildup-only model</strong>. Insights are based on limited training data (3–6 matches per team). Not predictive. For methodology demonstration only.</p>
+<p style="font-size:9px;color:#666;margin-bottom:10px">Data provided by <a href="https://github.com/statsbomb/open-data" style="color:#888">StatsBomb Open Data</a>.</p>
+<details style="margin-bottom:12px;background:#1a2634;border:1px solid #2a3a4a;border-radius:6px;padding:10px;font-size:11px;color:#aaa">
+<summary style="cursor:pointer;color:#e0e0e0;font-size:12px;font-weight:600">How it works ▾</summary>
+<p style="margin-top:8px;line-height:1.6">Every on-ball action in a match (pass, carry, duel, etc.) is a state in a Markov chain, defined by action type, pitch zone, and which team has the ball. We compute <strong>absorption probabilities</strong>: given possession is in state X, what's the probability it ends in a goal for vs. against?</p>
+<p style="margin-top:6px;line-height:1.6">A hierarchical Bayesian prior (2.2M transitions from 314 matches across World Cup 2018 & 2022, Euro 2020 & 2024, AFCON 2023, and Copa América 2024) regularizes each team's observed transitions. Team-specific updates use World Cup 2022 plus each confederation's most recent continental tournament (Euro 2024, AFCON 2023, Copa 2024).</p>
+<p style="margin-top:6px;line-height:1.6">The <strong>advantage</strong> is how much a team's net scoring probability from a state exceeds the prior average. Positive = strength, negative = weakness.</p>
+<p style="margin-top:6px;line-height:1.6">Shots that directly led to goals are excluded — the insight is in the buildup patterns that shift scoring probability before the final shot.</p>
+<p style="margin-top:6px;line-height:1.6"><strong>Buildup-only model:</strong> This version goes further — goal-scoring and goal-conceding transitions are excluded entirely from each team's observed data when updating the posterior. The prior still contains all transitions (including goals), so absorption probabilities resolve correctly, but teams are differentiated <em>only</em> by their mid-chain buildup patterns: how they progress possession through passing, carrying, pressing, etc. This prevents the model from simply reflecting that a team scored a lot in a small sample, and instead surfaces the underlying tactical patterns that create (or prevent) scoring opportunities.</p>
+<p style="margin-top:6px;line-height:1.6">The <strong>GG+</strong> is a summary score: each state's advantage weighted by how often an average team occupies that state (prior frequency). It represents expected net goal probability added per possession, scaled ×10,000 for readability. Positive = above average, negative = below.</p>
+</details>
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('schedule')">Schedule</div>
+  <div class="tab" onclick="switchTab('team')">By Team</div>
+  <div class="tab" onclick="switchTab('category')">By Category</div>
+</div>
+
+<div id="schedule-view">
+  <div style="font-size:11px;color:#888;margin-bottom:10px;text-align:center">Tap a highlighted team to explore their tactical profile</div>
+  <div id="schedule-list"></div>
+</div>
+<div id="team-view" style="display:none">
+  <select id="team-select" onchange="selectTeam(this.value)">
+    <option value="">Select a team...</option>
+  </select>
+  <div id="team-gplus" style="font-size:12px;margin-bottom:8px;display:none"></div>
+  <div style="font-size:10px;color:#888;margin-bottom:4px">Minimum advantage to display:</div>
+  <div class="threshold-btns" id="thresh-btns"></div>
+  <div id="pitch-labels" style="display:flex;justify-content:space-between;font-size:10px;color:#888;margin-bottom:2px;padding:0 2px">
+    <span>Defending</span>
+    <span id="team-goal-label">Attacking →</span>
+  </div>
+  <div class="pitch-container">
+    <svg class="pitch-svg" viewBox="0 0 120 80" id="pitch"></svg>
+  </div>
+  <div class="legend">
+    <span><span class="dot" style="background:#3498db"></span> Strength</span>
+    <span><span class="dot" style="background:#e74c3c"></span> Weakness</span>
+    <span>Tap cell for detail</span>
+  </div>
+  <div class="nav-dots" id="nav-dots"></div>
+  <div class="nav-arrows">
+    <button class="nav-btn" id="prev-btn" onclick="navCard(-1)">← Prev</button>
+    <button class="nav-btn" id="next-btn" onclick="navCard(1)">Next →</button>
+  </div>
+  <div id="card-container"></div>
+</div>
+
+<div id="category-view" style="display:none">
+  <select id="cat-select" onchange="selectCategory(this.value)">
+    <option value="">Select a category...</option>
+  </select>
+  <div id="cat-results"></div>
+</div>
+
+<script>
+let DATA = null;
+let currentTeam = '';
+let currentThreshold = 0.001;
+let currentStates = [];
+let currentIdx = 0;
+
+fetch('data/teams.json').then(r => r.json()).then(d => {
+  DATA = d;
+  const sel = document.getElementById('team-select');
+  d.available_teams.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t; opt.textContent = t + (d.teams[t] ? '' : ' (no data)');
+    if (!d.teams[t]) opt.disabled = true;
+    sel.appendChild(opt);
+  });
+  const catSel = document.getElementById('cat-select');
+  d.categories.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    catSel.appendChild(opt);
+  });
+  const tDiv = document.getElementById('thresh-btns');
+  const labels = ['Low', 'Mid', 'High'];
+  d.thresholds.forEach((t, i) => {
+    const btn = document.createElement('div');
+    btn.className = 'thresh-btn' + (i === 1 ? ' active' : '');
+    btn.textContent = labels[i] + ' (' + t + ')';
+    btn.setAttribute('data-t', t);
+    btn.onclick = () => setThreshold(t, btn);
+    tDiv.appendChild(btn);
+  });
+  drawPitchLines();
+  // Load fixtures
+  fetch('data/fixtures.json').then(r=>r.json()).then(renderSchedule);
+});
+
+function renderSchedule(fixtures) {
+  window._fixtures = fixtures;
+  renderScheduleList();
+}
+
+function renderScheduleList() {
+  const fixtures = window._fixtures;
+  if (!fixtures) return;
+  const el = document.getElementById('schedule-list');
+  let lastGroup = '';
+  let html = '';
+  fixtures.forEach(f => {
+    if (f.group !== lastGroup) {
+      html += '<div class="group-header">Group ' + f.group + '</div>';
+      lastGroup = f.group;
+    }
+    const homeData = DATA.teams[f.home];
+    const awayData = DATA.teams[f.away];
+    const homeGplus = DATA.gplus?.[f.home];
+    const awayGplus = DATA.gplus?.[f.away];
+    const gpFmt = v => v == null ? '' : `<span class="gplus" style="color:${v>=0?'#3498db':'#e74c3c'}">${v>=0?'+':''}${v.toFixed(2)}</span>`;
+    html += '<div class="fixture">' +
+      '<div class="team-block">' +
+        '<span class="team-name' + (homeData?' has-data':'') + '" onclick="goToTeam(\'' + f.home.replace(/'/g,"\\'") + '\')">' + f.home + (homeData ? ' 📊' : '') + '</span>' +
+        (homeGplus!=null ? '<span class="meta">GG+ ' + gpFmt(homeGplus) + '</span>' : '') +
+        '<span class="meta">' + f.date + ' · ' + (f.time||'') + ' ET</span>' +
+      '</div>' +
+      '<div class="vs-block">vs</div>' +
+      '<div class="team-block">' +
+        '<span class="team-name' + (awayData?' has-data':'') + '" onclick="goToTeam(\'' + f.away.replace(/'/g,"\\'") + '\')">' + f.away + (awayData ? ' 📊' : '') + '</span>' +
+        (awayGplus!=null ? '<span class="meta">GG+ ' + gpFmt(awayGplus) + '</span>' : '') +
+        '<span class="meta">' + f.venue + '</span>' +
+      '</div>' +
+    '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('team-view').style.display = tab === 'team' ? '' : 'none';
+  document.getElementById('category-view').style.display = tab === 'category' ? '' : 'none';
+  document.getElementById('schedule-view').style.display = tab === 'schedule' ? '' : 'none';
+}
+
+function setThreshold(t, btn) {
+  currentThreshold = t;
+  document.querySelectorAll('.thresh-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.thresh-btn[data-t="'+t+'"]').forEach(b => b.classList.add('active'));
+  if (currentTeam) renderTeam(currentTeam);
+}
+
+function drawPitchLines() {
+  const svg = document.getElementById('pitch');
+  svg.innerHTML = `
+    <rect x="0" y="0" width="120" height="80" fill="#2d5a27"/>
+    <line x1="60" y1="0" x2="60" y2="80" stroke="#fff" stroke-width="0.3" opacity="0.4"/>
+    <rect x="0" y="18" width="18" height="44" fill="none" stroke="#fff" stroke-width="0.3" opacity="0.4"/>
+    <rect x="102" y="18" width="18" height="44" fill="none" stroke="#fff" stroke-width="0.3" opacity="0.4"/>
+    <rect x="0" y="30" width="6" height="20" fill="none" stroke="#fff" stroke-width="0.3" opacity="0.4"/>
+    <rect x="114" y="30" width="6" height="20" fill="none" stroke="#fff" stroke-width="0.3" opacity="0.4"/>
+    <circle cx="60" cy="40" r="9.15" fill="none" stroke="#fff" stroke-width="0.3" opacity="0.4"/>
+    <rect x="0" y="0" width="120" height="80" fill="none" stroke="#fff" stroke-width="0.4" opacity="0.6"/>
+    <text x="112" y="5" font-size="3.5" fill="#fff" opacity="0.6">→</text>
+    <text x="2" y="5" font-size="3.5" fill="#fff" opacity="0.6">←</text>
+  `;
+}
+
+function selectTeam(team) {
+  currentTeam = team;
+  document.getElementById('team-goal-label').textContent = team + ' attacking →';
+  const gpEl = document.getElementById('team-gplus');
+  const gp = DATA.gplus?.[team];
+  if (gp != null) {
+    const color = gp >= 0 ? '#3498db' : '#e74c3c';
+    gpEl.innerHTML = `GG+: <span style="color:${color};font-weight:600">${gp>=0?'+':''}${gp.toFixed(2)}</span>`;
+    gpEl.style.display = '';
+  } else {
+    gpEl.style.display = 'none';
+  }
+  renderTeam(team);
+}
+
+function renderTeam(team) {
+  const svg = document.getElementById('pitch');
+  drawPitchLines();
+  const container = document.getElementById('card-container');
+  const dots = document.getElementById('nav-dots');
+  container.innerHTML = ''; dots.innerHTML = '';
+
+  if (!DATA.teams[team]) {
+    container.innerHTML = '<div class="no-data">No data available</div>';
+    return;
+  }
+
+  currentStates = DATA.teams[team]
+    .filter(s => Math.abs(s.a) >= currentThreshold)
+    .sort((a, b) => Math.abs(b.a) - Math.abs(a.a));
+
+  if (currentStates.length === 0) {
+    container.innerHTML = '<div class="no-data">No states above threshold</div>';
+    return;
+  }
+
+  const maxAdv = Math.max(...currentStates.map(s => Math.abs(s.a)));
+
+  currentStates.forEach((s, idx) => {
+    const x = s.gx * 10 - 5, y = s.gy * 10 - 5;
+    const color = s.a > 0 ? '#3498db' : '#e74c3c';
+    const opacity = 0.3 + 0.5 * (Math.abs(s.a) / maxAdv);
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', x); rect.setAttribute('y', y);
+    rect.setAttribute('width', 10); rect.setAttribute('height', 10);
+    rect.setAttribute('fill', color); rect.setAttribute('opacity', opacity);
+    rect.setAttribute('stroke', color); rect.setAttribute('stroke-width', '0.5');
+    rect.setAttribute('class', 'cell');
+    rect.setAttribute('data-idx', idx);
+    rect.onclick = () => showCardAt(idx);
+    svg.appendChild(rect);
+
+    const dot = document.createElement('div');
+    dot.className = 'nav-dot ' + (s.a > 0 ? 'strength' : 'weakness');
+    dot.onclick = () => showCardAt(idx);
+    dots.appendChild(dot);
+  });
+
+  currentIdx = 0;
+  showCardAt(0);
+}
+
+function showCardAt(idx) {
+  currentIdx = idx;
+  const s = currentStates[idx];
+  const team = currentTeam;
+  const type = s.a > 0 ? 'strength' : 'weakness';
+  const who = s.tr === 'teamA' ? team : 'Opponent';
+
+  // Highlight active dot
+  document.querySelectorAll('.nav-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+
+  // Highlight cell on pitch
+  let activeCell = null;
+  document.querySelectorAll('.cell').forEach(c => {
+    const active = c.dataset.idx == idx;
+    if (active) {
+      activeCell = c;
+      c.setAttribute('stroke', '#000000');
+      c.setAttribute('stroke-width', '2');
+      c.setAttribute('opacity', '1');
+    } else {
+      c.setAttribute('stroke', 'none');
+      c.setAttribute('stroke-width', '0');
+      c.setAttribute('opacity', '0.25');
+    }
+  });
+  // Move active cell to top of SVG so outline isn't occluded
+  if (activeCell) activeCell.parentNode.appendChild(activeCell);
+
+  let html = `<div class="card">
+    <div class="card-header">
+      <div class="card-title">${who}: ${s.c}</div>
+      <div class="card-badge ${type}">${s.a > 0 ? '+' : ''}${s.a.toFixed(4)}</div>
+    </div>
+    <div class="card-meta">Grid (${s.gx}, ${s.gy}) · ${s.n} observations · ${idx + 1}/${currentStates.length}</div>`;
+
+  const seqs = DATA.sequences[team]?.[s.s];
+  if (seqs && seqs.length > 0) {
+    const roster = DATA.rosters[team] || [];
+    const isOwnTeamState = s.tr === 'teamA';
+    html += '<div class="seq-container">';
+    seqs.forEach(seq => {
+      const [prev, player, l2, next, opponent, comp] = seq;
+      const notRostered = isOwnTeamState && roster.length > 0 && !roster.includes(player);
+      const playerHtml = notRostered ? `<span style="color:#e74c3c">${player}</span>` : player;
+      html += `<div class="seq">${prev} <span class="arrow">→</span> ${playerHtml} ${l2} <span class="arrow">→</span> ${next}<span class="meta">vs ${opponent} · ${comp}</span></div>`;
+    });
+    html += '</div>';
+  } else {
+    html += '<div class="seq" style="color:#666">No sequence data available</div>';
+  }
+  html += '</div>';
+  document.getElementById('card-container').innerHTML = html;
+
+  document.getElementById('prev-btn').disabled = idx === 0;
+  document.getElementById('next-btn').disabled = idx === currentStates.length - 1;
+}
+
+function navCard(dir) {
+  const newIdx = currentIdx + dir;
+  if (newIdx >= 0 && newIdx < currentStates.length) showCardAt(newIdx);
+}
+
+function miniPitch(gx, gy, color) {
+  const x = gx * 10 - 5, y = gy * 10 - 5;
+  const c = color === '#3498db' ? '#5dade2' : '#c0392b';
+  return `<svg viewBox="0 0 120 80" style="width:30px;height:20px;margin-right:6px;flex-shrink:0;border-radius:2px;background:#2d5a27"><rect x="${x-2}" y="${y-2}" width="14" height="14" fill="${c}"/><line x1="60" y1="0" x2="60" y2="80" stroke="#fff" stroke-width="1" opacity="0.3"/><rect x="0" y="0" width="120" height="80" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.4"/></svg>`;
+}
+
+function selectCategory(cat) {
+  const results = document.getElementById('cat-results');
+  if (!cat) { results.innerHTML = ''; return; }
+  const highThresh = DATA.thresholds[2];
+  let entries = [];
+  for (const [team, states] of Object.entries(DATA.teams)) {
+    states.filter(s => s.c === cat && s.n >= 5 && Math.abs(s.a) >= highThresh).forEach(s => entries.push({ team, ...s }));
+  }
+  const strengths = entries.filter(e => e.a > 0).sort((a, b) => b.a - a.a).slice(0, 20);
+  const weaknesses = entries.filter(e => e.a < 0).sort((a, b) => a.a - b.a).slice(0, 20);
+
+  let html = '<div class="card"><div class="card-title" style="color:#3498db;margin-bottom:8px">Strengths</div>';
+  strengths.forEach(e => {
+    const who = e.tr === 'teamA' ? e.team : e.team + ' (opp)';
+    const mini = miniPitch(e.gx, e.gy, '#3498db');
+    html += `<div class="cat-team" onclick="goToTeamHigh('${e.team}','${e.s}')">${mini}<span>${who} · (${e.gx},${e.gy})</span><span class="adv" style="color:#3498db">+${e.a.toFixed(4)}</span></div>`;
+  });
+  html += '</div>';
+  if (weaknesses.length > 0) {
+    html += '<div class="card"><div class="card-title" style="color:#e74c3c;margin-bottom:8px">Weaknesses</div>';
+    weaknesses.forEach(e => {
+      const who = e.tr === 'teamA' ? e.team : e.team + ' (opp)';
+      const mini = miniPitch(e.gx, e.gy, '#e74c3c');
+      html += `<div class="cat-team" onclick="goToTeamHigh('${e.team}','${e.s}')">${mini}<span>${who} · (${e.gx},${e.gy})</span><span class="adv" style="color:#e74c3c">${e.a.toFixed(4)}</span></div>`;
+    });
+    html += '</div>';
+  }
+  results.innerHTML = html;
+}
+
+function goToTeam(team) {
+  switchTabDirect('team');
+  document.getElementById('team-select').value = team;
+  selectTeam(team);
+}
+
+function goToTeamHigh(team, state) {
+  currentThreshold = DATA.thresholds[2];
+  document.querySelectorAll('.thresh-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-t') == DATA.thresholds[2]));
+  switchTabDirect('team');
+  document.getElementById('team-select').value = team;
+  selectTeam(team);
+  if (state) {
+    const idx = currentStates.findIndex(s => s.s === state);
+    if (idx >= 0) showCardAt(idx);
+  }
+}
+
+function switchTabDirect(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', 
+    (tab==='schedule'&&i===0)||(tab==='team'&&i===1)||(tab==='category'&&i===2)));
+  document.getElementById('schedule-view').style.display = tab === 'schedule' ? '' : 'none';
+  document.getElementById('team-view').style.display = tab === 'team' ? '' : 'none';
+  document.getElementById('category-view').style.display = tab === 'category' ? '' : 'none';
+}
+</script>
+</body>
+</html>
