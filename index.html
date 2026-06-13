@@ -395,8 +395,8 @@ function goToTeam(team) {
 }
 
 function goToTeamHigh(team, state) {
-  currentThreshold = DATA.thresholds[2];
-  document.querySelectorAll('.thresh-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-t') == DATA.thresholds[2]));
+  currentThreshold = DATA.thresholds[1];
+  document.querySelectorAll('.thresh-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-t') == DATA.thresholds[1]));
   switchTabDirect('team');
   document.getElementById('team-select').value = team;
   selectTeam(team);
