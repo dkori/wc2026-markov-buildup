@@ -118,7 +118,7 @@ select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #2a3a
 <script>
 let DATA = null;
 let currentTeam = '';
-let currentThreshold = 0.001;
+let currentThreshold = 0.025;
 let currentStates = [];
 let currentIdx = 0;
 
@@ -357,7 +357,7 @@ function selectCategory(cat) {
   const highThresh = DATA.thresholds[2];
   let entries = [];
   for (const [team, states] of Object.entries(DATA.teams)) {
-    states.filter(s => s.c === cat && s.n >= 5 && Math.abs(s.a) >= highThresh).forEach(s => entries.push({ team, ...s }));
+    states.filter(s => s.c0 === cat && s.n >= 5 && Math.abs(s.a) >= highThresh).forEach(s => entries.push({ team, ...s }));
   }
   const strengths = entries.filter(e => e.a > 0).sort((a, b) => b.a - a.a).slice(0, 20);
   const weaknesses = entries.filter(e => e.a < 0).sort((a, b) => a.a - b.a).slice(0, 20);
