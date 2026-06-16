@@ -118,7 +118,7 @@ select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #2a3a
 <script>
 let DATA = null;
 let currentTeam = '';
-let currentThreshold = 0.015;
+let currentThreshold = 35;
 let currentStates = [];
 let currentIdx = 0;
 
@@ -138,7 +138,7 @@ fetch('data/teams.json').then(r => r.json()).then(d => {
   const catSel = document.getElementById('cat-select');
   const midThresh = d.thresholds[1];
   d.categories.forEach(c => {
-    const hasEntries = Object.values(d.teams).some(states => states.some(s => s.c0 === c && Math.abs(s.a) >= midThresh));
+    const hasEntries = Object.values(d.teams).some(states => states.some(s => s.c0 === c && (s.a >= midThresh || s.a <= -midThresh)));
     const opt = document.createElement('option');
     opt.value = c; opt.textContent = c + (hasEntries ? '' : ' (none)');
     if (!hasEntries) opt.style.color = '#666';
@@ -149,7 +149,7 @@ fetch('data/teams.json').then(r => r.json()).then(d => {
   d.thresholds.forEach((t, i) => {
     const btn = document.createElement('div');
     btn.className = 'thresh-btn' + (i === 1 ? ' active' : '');
-    btn.textContent = labels[i] + ' (' + t + ')';
+    btn.textContent = labels[i] + ' (±' + t + ')';
     btn.setAttribute('data-t', t);
     btn.onclick = () => setThreshold(t, btn);
     tDiv.appendChild(btn);
@@ -256,7 +256,7 @@ function renderTeam(team) {
   }
 
   currentStates = DATA.teams[team]
-    .filter(s => Math.abs(s.a) >= currentThreshold)
+    .filter(s => s.a >= currentThreshold || s.a <= -currentThreshold)
     .sort((a, b) => Math.abs(b.a) - Math.abs(a.a));
 
   if (currentStates.length === 0) {
@@ -264,7 +264,7 @@ function renderTeam(team) {
     return;
   }
 
-  const maxAdv = Math.max(...currentStates.map(s => Math.abs(s.a)));
+  const maxAdv = 50;
 
   currentStates.forEach((s, idx) => {
     const x = s.gx * 10 - 5, y = s.gy * 10 - 5;
@@ -321,7 +321,7 @@ function showCardAt(idx) {
   let html = `<div class="card">
     <div class="card-header">
       <div class="card-title">${who}: ${s.c}</div>
-      <div class="card-badge ${type}">${s.a > 0 ? '+' : ''}${s.a.toFixed(4)}</div>
+      <div class="card-badge ${type}">${s.a > 0 ? '+' : ''}${s.a.toFixed(1)}</div>
     </div>
     <div class="card-meta">Grid (${s.gx}, ${s.gy}) · ${s.n} observations · ${idx + 1}/${currentStates.length}</div>`;
 
@@ -364,7 +364,7 @@ function selectCategory(cat) {
   const highThresh = DATA.thresholds[1];
   let entries = [];
   for (const [team, states] of Object.entries(DATA.teams)) {
-    states.filter(s => s.c0 === cat && s.n >= 5 && Math.abs(s.a) >= highThresh).forEach(s => entries.push({ team, ...s }));
+    states.filter(s => s.c0 === cat && s.n >= 5 && (s.a >= highThresh || s.a <= -highThresh)).forEach(s => entries.push({ team, ...s }));
   }
   const strengths = entries.filter(e => e.a > 0).sort((a, b) => b.a - a.a).slice(0, 20);
   const weaknesses = entries.filter(e => e.a < 0).sort((a, b) => a.a - b.a).slice(0, 20);
@@ -373,7 +373,7 @@ function selectCategory(cat) {
   strengths.forEach(e => {
     const who = e.tr === 'teamA' ? e.team : e.team + ' (opp)';
     const mini = miniPitch(e.gx, e.gy, '#3498db');
-    html += `<div class="cat-team" onclick="goToTeamHigh('${e.team}','${e.s}')">${mini}<span>${who} · (${e.gx},${e.gy})</span><span class="adv" style="color:#3498db">+${e.a.toFixed(4)}</span></div>`;
+    html += `<div class="cat-team" onclick="goToTeamHigh('${e.team}','${e.s}')">${mini}<span>${who} · (${e.gx},${e.gy})</span><span class="adv" style="color:#3498db">+${e.a.toFixed(1)}</span></div>`;
   });
   html += '</div>';
   if (weaknesses.length > 0) {
@@ -381,7 +381,7 @@ function selectCategory(cat) {
     weaknesses.forEach(e => {
       const who = e.tr === 'teamA' ? e.team : e.team + ' (opp)';
       const mini = miniPitch(e.gx, e.gy, '#e74c3c');
-      html += `<div class="cat-team" onclick="goToTeamHigh('${e.team}','${e.s}')">${mini}<span>${who} · (${e.gx},${e.gy})</span><span class="adv" style="color:#e74c3c">${e.a.toFixed(4)}</span></div>`;
+      html += `<div class="cat-team" onclick="goToTeamHigh('${e.team}','${e.s}')">${mini}<span>${who} · (${e.gx},${e.gy})</span><span class="adv" style="color:#e74c3c">${e.a.toFixed(1)}</span></div>`;
     });
     html += '</div>';
   }
@@ -401,7 +401,6 @@ function goToTeamHigh(team, state) {
   if (state) {
     let idx = currentStates.findIndex(s => s.s === state);
     if (idx < 0) {
-      // State not visible at current threshold — drop to Low
       currentThreshold = DATA.thresholds[0];
       document.querySelectorAll('.thresh-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-t') == DATA.thresholds[0]));
       selectTeam(team);
