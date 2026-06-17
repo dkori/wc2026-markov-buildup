@@ -86,7 +86,9 @@ select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #2a3a
     <option value="">Select a team...</option>
   </select>
   <div id="team-gplus" style="font-size:12px;margin-bottom:8px;display:none"></div>
-  <div style="font-size:10px;color:#888;margin-bottom:4px">Minimum advantage to display:</div>
+  <div style="font-size:10px;color:#888;margin-bottom:4px">Show:</div>
+  <div class="threshold-btns" id="dir-btns"></div>
+  <div style="font-size:10px;color:#888;margin-bottom:4px;margin-top:6px">Min percentile:</div>
   <div class="threshold-btns" id="thresh-btns"></div>
   <div id="pitch-labels" style="display:flex;justify-content:space-between;font-size:10px;color:#888;margin-bottom:2px;padding:0 2px">
     <span>Defending</span>
@@ -118,7 +120,8 @@ select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #2a3a
 <script>
 let DATA = null;
 let currentTeam = '';
-let currentThreshold = 35;
+let currentThreshold = 30;
+let currentDir = 'both'; // 'strengths', 'weaknesses', 'both'
 let currentStates = [];
 let currentIdx = 0;
 
@@ -145,14 +148,24 @@ fetch('data/teams.json').then(r => r.json()).then(d => {
     catSel.appendChild(opt);
   });
   const tDiv = document.getElementById('thresh-btns');
-  const labels = ['Low', 'Mid', 'High'];
   d.thresholds.forEach((t, i) => {
     const btn = document.createElement('div');
-    btn.className = 'thresh-btn' + (i === 1 ? ' active' : '');
-    btn.textContent = labels[i] + ' (±' + t + ')';
+    btn.className = 'thresh-btn' + (t === 30 ? ' active' : '');
+    btn.textContent = '±' + t;
     btn.setAttribute('data-t', t);
     btn.onclick = () => setThreshold(t, btn);
     tDiv.appendChild(btn);
+  });
+  // Direction toggle
+  const dDiv = document.getElementById('dir-btns');
+  ['Strengths', 'Both', 'Weaknesses'].forEach(label => {
+    const btn = document.createElement('div');
+    const dir = label.toLowerCase();
+    btn.className = 'thresh-btn' + (dir === 'both' ? ' active' : '');
+    btn.textContent = label;
+    btn.setAttribute('data-dir', dir);
+    btn.onclick = () => setDir(dir, btn);
+    dDiv.appendChild(btn);
   });
   drawPitchLines();
   // Load fixtures
@@ -207,8 +220,15 @@ function switchTab(tab) {
 
 function setThreshold(t, btn) {
   currentThreshold = t;
-  document.querySelectorAll('.thresh-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.thresh-btn[data-t="'+t+'"]').forEach(b => b.classList.add('active'));
+  document.querySelectorAll('#thresh-btns .thresh-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (currentTeam) renderTeam(currentTeam);
+}
+
+function setDir(dir, btn) {
+  currentDir = dir;
+  document.querySelectorAll('#dir-btns .thresh-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
   if (currentTeam) renderTeam(currentTeam);
 }
 
@@ -256,7 +276,11 @@ function renderTeam(team) {
   }
 
   currentStates = DATA.teams[team]
-    .filter(s => s.a >= currentThreshold || s.a <= -currentThreshold)
+    .filter(s => {
+      if (currentDir === 'strengths') return s.a >= currentThreshold;
+      if (currentDir === 'weaknesses') return s.a <= -currentThreshold;
+      return s.a >= currentThreshold || s.a <= -currentThreshold;
+    })
     .sort((a, b) => Math.abs(b.a) - Math.abs(a.a));
 
   if (currentStates.length === 0) {
@@ -331,10 +355,11 @@ function showCardAt(idx) {
     const isOwnTeamState = s.tr === 'teamA';
     html += '<div class="seq-container">';
     seqs.forEach(seq => {
-      const [prev, player, l2, next, opponent, comp] = seq;
+      const [prev, player, l2, next, opponent, comp, duel] = seq;
       const notRostered = isOwnTeamState && roster.length > 0 && !roster.includes(player);
       const playerHtml = notRostered ? `<span style="color:#e74c3c">${player}</span>` : player;
-      html += `<div class="seq">${prev} <span class="arrow">→</span> ${playerHtml} ${l2} <span class="arrow">→</span> ${next}<span class="meta">vs ${opponent} · ${comp}</span></div>`;
+      const duelHtml = duel ? ` <span class="opp">(${duel})</span>` : '';
+      html += `<div class="seq">${prev} <span class="arrow">→</span> ${playerHtml} ${l2}${duelHtml} <span class="arrow">→</span> ${next}<span class="meta">vs ${opponent} · ${comp}</span></div>`;
     });
     html += '</div>';
   } else {
@@ -402,7 +427,7 @@ function goToTeamHigh(team, state) {
     let idx = currentStates.findIndex(s => s.s === state);
     if (idx < 0) {
       currentThreshold = DATA.thresholds[0];
-      document.querySelectorAll('.thresh-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-t') == DATA.thresholds[0]));
+      document.querySelectorAll('#thresh-btns .thresh-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-t') == DATA.thresholds[0]));
       selectTeam(team);
       idx = currentStates.findIndex(s => s.s === state);
     }
