@@ -97,6 +97,8 @@ select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #2a3a
   <div class="threshold-btns" id="dir-btns"></div>
   <div style="font-size:10px;color:#888;margin-bottom:4px;margin-top:6px">Min percentile: <span id="thresh-val">±30</span></div>
     <input type="range" id="thresh-slider" min="5" max="45" step="5" value="30" style="width:100%;accent-color:#e94560" oninput="setThreshold(+this.value)">
+  <div style="font-size:10px;color:#888;margin-bottom:4px;margin-top:6px">Mode:</div>
+  <div class="threshold-btns" id="mode-btns"></div>
   <div id="pitch-labels" style="display:flex;justify-content:space-between;font-size:10px;color:#888;margin-bottom:2px;padding:0 2px">
     <span>Defending</span>
     <span id="team-goal-label">Attacking →</span>
@@ -129,6 +131,7 @@ let DATA = null;
 let currentTeam = '';
 let currentThreshold = 30;
 let currentDir = 'both'; // 'strengths', 'weaknesses', 'both'
+let currentMode = 'absolute'; // 'absolute', 'relative'
 let currentStates = [];
 let currentIdx = 0;
 
@@ -164,6 +167,15 @@ fetch('data/teams.json').then(r => r.json()).then(d => {
     btn.setAttribute('data-dir', dir);
     btn.onclick = () => setDir(dir, btn);
     dDiv.appendChild(btn);
+  });
+  // Mode toggle (absolute/relative)
+  const mDiv = document.getElementById('mode-btns');
+  ['Absolute', 'Relative'].forEach(label => {
+    const btn = document.createElement('div');
+    btn.className = 'thresh-btn' + (label === 'Absolute' ? ' active' : '');
+    btn.textContent = label;
+    btn.onclick = () => setMode(label.toLowerCase(), btn);
+    mDiv.appendChild(btn);
   });
   drawPitchLines();
   // Load fixtures
@@ -277,6 +289,13 @@ function setDir(dir, btn) {
   if (currentTeam) renderTeam(currentTeam);
 }
 
+function setMode(mode, btn) {
+  currentMode = mode;
+  document.querySelectorAll('#mode-btns .thresh-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (currentTeam) renderTeam(currentTeam);
+}
+
 function drawPitchLines() {
   const svg = document.getElementById('pitch');
   svg.innerHTML = `
@@ -321,13 +340,20 @@ function renderTeam(team) {
     return;
   }
 
+  // Compute team median for relative mode
+  const allA = DATA.teams[team].map(s => s.a).sort((a,b) => a-b);
+  const teamMedian = allA[Math.floor(allA.length/2)];
+
+  const getAdv = s => currentMode === 'relative' ? Math.round((s.a - teamMedian)*10)/10 : s.a;
+
   currentStates = DATA.teams[team]
+    .map(s => ({...s, adv: getAdv(s)}))
     .filter(s => {
-      if (currentDir === 'strengths') return s.a >= currentThreshold;
-      if (currentDir === 'weaknesses') return s.a <= -currentThreshold;
-      return s.a >= currentThreshold || s.a <= -currentThreshold;
+      if (currentDir === 'strengths') return s.adv >= currentThreshold;
+      if (currentDir === 'weaknesses') return s.adv <= -currentThreshold;
+      return s.adv >= currentThreshold || s.adv <= -currentThreshold;
     })
-    .sort((a, b) => Math.abs(b.a) - Math.abs(a.a));
+    .sort((a, b) => Math.abs(b.adv) - Math.abs(a.adv));
 
   if (currentStates.length === 0) {
     container.innerHTML = '<div class="no-data">No states above threshold</div>';
@@ -338,8 +364,8 @@ function renderTeam(team) {
 
   currentStates.forEach((s, idx) => {
     const x = s.gx * 10 - 5, y = s.gy * 10 - 5;
-    const color = s.a > 0 ? '#3498db' : '#e74c3c';
-    const opacity = 0.3 + 0.5 * (Math.abs(s.a) / maxAdv);
+    const color = s.adv > 0 ? '#3498db' : '#e74c3c';
+    const opacity = 0.3 + 0.5 * (Math.abs(s.adv) / maxAdv);
     const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     rect.setAttribute('x', x); rect.setAttribute('y', y);
     rect.setAttribute('width', 10); rect.setAttribute('height', 10);
@@ -351,7 +377,7 @@ function renderTeam(team) {
     svg.appendChild(rect);
 
     const dot = document.createElement('div');
-    dot.className = 'nav-dot ' + (s.a > 0 ? 'strength' : 'weakness');
+    dot.className = 'nav-dot ' + (s.adv > 0 ? 'strength' : 'weakness');
     dot.onclick = () => showCardAt(idx);
     dots.appendChild(dot);
   });
@@ -366,7 +392,7 @@ function showCardAt(idx) {
   currentIdx = idx;
   const s = currentStates[idx];
   const team = currentTeam;
-  const type = s.a > 0 ? 'strength' : 'weakness';
+  const type = s.adv > 0 ? 'strength' : 'weakness';
   const who = s.tr === 'teamA' ? team : 'Opponent';
 
   // Highlight active dot
@@ -393,7 +419,7 @@ function showCardAt(idx) {
   let html = `<div class="card">
     <div class="card-header">
       <div class="card-title">${who}: ${s.c}</div>
-      <div class="card-badge ${type}">${s.a > 0 ? '+' : ''}${s.a.toFixed(1)}</div>
+      <div class="card-badge ${type}">${s.adv > 0 ? '+' : ''}${s.adv.toFixed(1)}</div>
     </div>
     <div class="card-meta">Grid (${s.gx}, ${s.gy}) · ${s.n} observations · ${idx + 1}/${currentStates.length}</div>`;
 
