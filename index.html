@@ -204,10 +204,10 @@ function renderScheduleList() {
   if (focusIdx < 0) focusIdx = dates.length - 1;
 
   let html = '';
-  // Past matches (collapsed)
+  // Past matches (expanded)
   if (focusIdx > 0) {
-    html += '<div class="day-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'\':\'none\';this.textContent=this.textContent.startsWith(\'▶\')?\'▼ Past matches\':\'▶ Past matches ('+focusIdx+' days)\'">▶ Past matches (' + focusIdx + ' days)</div>';
-    html += '<div style="display:none">';
+    html += '<div class="day-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'\':\'none\';this.textContent=this.textContent.startsWith(\'▶\')?\'▼ Past matches\':\'▶ Past matches (' + focusIdx + ' days)\'">▼ Past matches</div>';
+    html += '<div>';
     for (let i = 0; i < focusIdx; i++) html += renderDay(byDate[dates[i]], dates[i]);
     html += '</div>';
   }
@@ -240,12 +240,13 @@ function renderDay(matches, dateStr) {
     const awayGplus = DATA.gplus?.[f.away];
     const gpFmt = v => v == null ? '' : '<span class="gplus" style="color:'+(v>=0?'#3498db':'#e74c3c')+'">'+(v>=0?'+':'')+v.toFixed(2)+'</span>';
     const scoreHtml = f.score ? '<span class="score">' + f.score + '</span>' : '<span class="vs-time">' + timeStr + '</span>';
+    const venueTime = f.score ? f.venue : f.venue + ' · ' + timeStr;
     html += '<div class="fixture">' +
       '<div class="team-block">' +
         '<span class="team-name' + (homeData?' has-data':'') + '" onclick="goToTeam(\'' + f.home.replace(/'/g,"\\'") + '\')">' + f.home + (homeData ? ' 📊' : '') + '</span>' +
         (homeGplus!=null ? '<span class="meta">GG+ ' + gpFmt(homeGplus) + '</span>' : '') +
       '</div>' +
-      '<div class="vs-block">' + scoreHtml + '<span class="meta">' + f.venue + '</span></div>' +
+      '<div class="vs-block">' + scoreHtml + '<span class="meta">' + venueTime + '</span></div>' +
       '<div class="team-block">' +
         '<span class="team-name' + (awayData?' has-data':'') + '" onclick="goToTeam(\'' + f.away.replace(/'/g,"\\'") + '\')">' + f.away + (awayData ? ' 📊' : '') + '</span>' +
         (awayGplus!=null ? '<span class="meta">GG+ ' + gpFmt(awayGplus) + '</span>' : '') +
