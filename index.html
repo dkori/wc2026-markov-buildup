@@ -37,6 +37,13 @@ select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #2a3a
 .seq .seq-num { display: inline-block; width: 16px; height: 16px; line-height: 16px; text-align: center; border-radius: 50%; background: #e94560; color: #fff; font-size: 9px; font-weight: bold; margin-right: 2px; vertical-align: middle; opacity: 0; }
 .seq.active .seq-num { opacity: 1; }
 .seq-container { max-height: 280px; overflow-y: auto; border-radius: 6px; }
+.toggle-switch { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.toggle-switch input { display: none; }
+.toggle-slider { width: 32px; height: 18px; background: #2a3a4a; border-radius: 9px; position: relative; transition: background 0.2s; }
+.toggle-slider::after { content: ''; position: absolute; width: 14px; height: 14px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: transform 0.2s; }
+.toggle-switch input:checked + .toggle-slider { background: #e94560; }
+.toggle-switch input:checked + .toggle-slider::after { transform: translateX(14px); }
+.toggle-label { font-size: 11px; color: #ccc; }
 .nav-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 12px; }
 .nav-dot { width: 8px; height: 8px; border-radius: 50%; background: #2a3a4a; cursor: pointer; }
 .nav-dot.active { background: #e94560; }
@@ -98,7 +105,7 @@ select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #2a3a
   <div style="font-size:10px;color:#888;margin-bottom:4px;margin-top:6px">Min percentile: <span id="thresh-val">±30</span></div>
     <input type="range" id="thresh-slider" min="5" max="45" step="5" value="30" style="width:100%;accent-color:#e94560" oninput="setThreshold(+this.value)">
   <div style="font-size:10px;color:#888;margin-bottom:4px;margin-top:6px">Mode:</div>
-  <div class="threshold-btns" id="mode-btns" style="gap:4px;margin-bottom:6px"></div>
+  <label class="toggle-switch" style="margin-bottom:8px"><input type="checkbox" id="mode-toggle" onchange="setMode(this.checked?'relative':'absolute')"><span class="toggle-slider"></span><span class="toggle-label" id="mode-label">Absolute</span></label>
   <div id="pitch-labels" style="display:flex;justify-content:space-between;font-size:10px;color:#888;margin-bottom:2px;padding:0 2px">
     <span>Defending</span>
     <span id="team-goal-label">Attacking →</span>
@@ -167,17 +174,6 @@ fetch('data/teams.json').then(r => r.json()).then(d => {
     btn.setAttribute('data-dir', dir);
     btn.onclick = () => setDir(dir, btn);
     dDiv.appendChild(btn);
-  });
-  // Mode toggle (absolute/relative)
-  const mDiv = document.getElementById('mode-btns');
-  ['Absolute', 'Relative'].forEach(label => {
-    const btn = document.createElement('div');
-    btn.className = 'thresh-btn' + (label === 'Absolute' ? ' active' : '');
-    btn.textContent = label;
-    btn.style.fontSize = '10px';
-    btn.style.padding = '2px 8px';
-    btn.onclick = () => setMode(label.toLowerCase(), btn);
-    mDiv.appendChild(btn);
   });
   drawPitchLines();
   // Load fixtures
@@ -291,10 +287,9 @@ function setDir(dir, btn) {
   if (currentTeam) renderTeam(currentTeam);
 }
 
-function setMode(mode, btn) {
+function setMode(mode) {
   currentMode = mode;
-  document.querySelectorAll('#mode-btns .thresh-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  document.getElementById('mode-label').textContent = mode === 'relative' ? 'Relative' : 'Absolute';
   if (currentTeam) renderTeam(currentTeam);
 }
 
@@ -343,19 +338,11 @@ function renderTeam(team) {
   }
 
   // Compute team median for relative mode
-  const allA = DATA.teams[team].map(s => s.a).sort((a,b) => a-b);
-  const teamMedian = allA[Math.floor(allA.length/2)];
-
-  const getAdv = s => currentMode === 'relative' ? Math.round((s.a - teamMedian)*10)/10 : s.a;
+  const getAdv = s => currentMode === 'relative' ? s.r : s.a;
 
   currentStates = DATA.teams[team]
     .map(s => ({...s, adv: getAdv(s)}))
     .filter(s => {
-      if (currentMode === 'relative') {
-        if (currentDir === 'strengths') return s.adv > 0;
-        if (currentDir === 'weaknesses') return s.adv < 0;
-        return true;
-      }
       if (currentDir === 'strengths') return s.adv >= currentThreshold;
       if (currentDir === 'weaknesses') return s.adv <= -currentThreshold;
       return s.adv >= currentThreshold || s.adv <= -currentThreshold;
