@@ -29,10 +29,13 @@ select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #2a3a
 .card-badge.strength { background: #3498db33; color: #3498db; }
 .card-badge.weakness { background: #e74c3c33; color: #e74c3c; }
 .card-meta { font-size: 11px; color: #888; margin-bottom: 10px; }
-.seq { font-size: 12px; color: #ccc; margin: 6px 0; padding: 6px 8px; background: #0f1923; border-radius: 4px; line-height: 1.5; }
+.seq { font-size: 12px; color: #ccc; margin: 6px 0; padding: 6px 8px; background: #0f1923; border-radius: 4px; line-height: 1.5; cursor: pointer; }
+.seq.active { background: #1a2f3f; border: 1px solid #e94560; }
 .seq .arrow { color: #e94560; font-weight: bold; }
 .seq .opp { color: #888; font-style: italic; }
 .seq .meta { color: #666; font-size: 10px; display: block; margin-top: 2px; }
+.seq .seq-num { display: inline-block; width: 16px; height: 16px; line-height: 16px; text-align: center; border-radius: 50%; background: #e94560; color: #fff; font-size: 9px; font-weight: bold; margin-right: 2px; vertical-align: middle; opacity: 0; }
+.seq.active .seq-num { opacity: 1; }
 .seq-container { max-height: 280px; overflow-y: auto; border-radius: 6px; }
 .nav-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 12px; }
 .nav-dot { width: 8px; height: 8px; border-radius: 50%; background: #2a3a4a; cursor: pointer; }
@@ -88,8 +91,8 @@ select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #2a3a
   <div id="team-gplus" style="font-size:12px;margin-bottom:8px;display:none"></div>
   <div style="font-size:10px;color:#888;margin-bottom:4px">Show:</div>
   <div class="threshold-btns" id="dir-btns"></div>
-  <div style="font-size:10px;color:#888;margin-bottom:4px;margin-top:6px">Min percentile:</div>
-  <div class="threshold-btns" id="thresh-btns"></div>
+  <div style="font-size:10px;color:#888;margin-bottom:4px;margin-top:6px">Min percentile: <span id="thresh-val">±30</span></div>
+  <input type="range" id="thresh-slider" min="15" max="45" step="1" value="30" style="width:100%;accent-color:#e94560" oninput="setThreshold(+this.value)">
   <div id="pitch-labels" style="display:flex;justify-content:space-between;font-size:10px;color:#888;margin-bottom:2px;padding:0 2px">
     <span>Defending</span>
     <span id="team-goal-label">Attacking →</span>
@@ -139,22 +142,13 @@ fetch('data/teams.json').then(r => r.json()).then(d => {
     sel.appendChild(opt);
   });
   const catSel = document.getElementById('cat-select');
-  const midThresh = d.thresholds[1];
+  const midThresh = 30;
   d.categories.forEach(c => {
     const hasEntries = Object.values(d.teams).some(states => states.some(s => s.c0 === c && (s.a >= midThresh || s.a <= -midThresh)));
     const opt = document.createElement('option');
     opt.value = c; opt.textContent = c + (hasEntries ? '' : ' (none)');
     if (!hasEntries) opt.style.color = '#666';
     catSel.appendChild(opt);
-  });
-  const tDiv = document.getElementById('thresh-btns');
-  d.thresholds.forEach((t, i) => {
-    const btn = document.createElement('div');
-    btn.className = 'thresh-btn' + (t === 30 ? ' active' : '');
-    btn.textContent = '±' + t;
-    btn.setAttribute('data-t', t);
-    btn.onclick = () => setThreshold(t, btn);
-    tDiv.appendChild(btn);
   });
   // Direction toggle
   const dDiv = document.getElementById('dir-btns');
@@ -218,10 +212,9 @@ function switchTab(tab) {
   document.getElementById('schedule-view').style.display = tab === 'schedule' ? '' : 'none';
 }
 
-function setThreshold(t, btn) {
+function setThreshold(t) {
   currentThreshold = t;
-  document.querySelectorAll('#thresh-btns .thresh-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  document.getElementById('thresh-val').textContent = '±' + t;
   if (currentTeam) renderTeam(currentTeam);
 }
 
@@ -235,6 +228,7 @@ function setDir(dir, btn) {
 function drawPitchLines() {
   const svg = document.getElementById('pitch');
   svg.innerHTML = `
+    <defs><marker id="seq-arrow" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4" fill="#fff" opacity="0.8"/></marker></defs>
     <rect x="0" y="0" width="120" height="80" fill="#2d5a27"/>
     <line x1="60" y1="0" x2="60" y2="80" stroke="#fff" stroke-width="0.3" opacity="0.4"/>
     <rect x="0" y="18" width="18" height="44" fill="none" stroke="#fff" stroke-width="0.3" opacity="0.4"/>
@@ -315,6 +309,8 @@ function renderTeam(team) {
 }
 
 function showCardAt(idx) {
+  document.querySelectorAll('.seq-overlay').forEach(e => e.remove());
+  document.querySelectorAll('.seq.active').forEach(e => e.classList.remove('active'));
   currentIdx = idx;
   const s = currentStates[idx];
   const team = currentTeam;
@@ -354,12 +350,12 @@ function showCardAt(idx) {
     const roster = DATA.rosters[team] || [];
     const isOwnTeamState = s.tr === 'teamA';
     html += '<div class="seq-container">';
-    seqs.forEach(seq => {
-      const [prev, player, l2, next, opponent, comp, duel] = seq;
+    seqs.forEach((seq, si) => {
+      const [prev, player, l2, next, opponent, comp, duel, pgx, pgy, ngx, ngy] = seq;
       const notRostered = isOwnTeamState && roster.length > 0 && !roster.includes(player);
       const playerHtml = notRostered ? `<span style="color:#e74c3c">${player}</span>` : player;
       const duelHtml = duel ? ` <span class="opp">(${duel})</span>` : '';
-      html += `<div class="seq">${prev} <span class="arrow">→</span> ${playerHtml} ${l2}${duelHtml} <span class="arrow">→</span> ${next}<span class="meta">vs ${opponent} · ${comp}</span></div>`;
+      html += `<div class="seq" onclick="plotSeqClick(this,${s.gx},${s.gy},${pgx},${pgy},${ngx},${ngy})"><span class="seq-num">1</span>${prev} <span class="arrow">→</span> <span class="seq-num">2</span>${playerHtml} ${l2}${duelHtml} <span class="arrow">→</span> <span class="seq-num">3</span>${next}<span class="meta">vs ${opponent} · ${comp}</span></div>`;
     });
     html += '</div>';
   } else {
@@ -386,7 +382,7 @@ function miniPitch(gx, gy, color) {
 function selectCategory(cat) {
   const results = document.getElementById('cat-results');
   if (!cat) { results.innerHTML = ''; return; }
-  const highThresh = DATA.thresholds[1];
+  const highThresh = 30;
   let entries = [];
   for (const [team, states] of Object.entries(DATA.teams)) {
     states.filter(s => s.c0 === cat && s.n >= 5 && (s.a >= highThresh || s.a <= -highThresh)).forEach(s => entries.push({ team, ...s }));
@@ -426,8 +422,9 @@ function goToTeamHigh(team, state) {
   if (state) {
     let idx = currentStates.findIndex(s => s.s === state);
     if (idx < 0) {
-      currentThreshold = DATA.thresholds[0];
-      document.querySelectorAll('#thresh-btns .thresh-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-t') == DATA.thresholds[0]));
+      currentThreshold = 15;
+      document.getElementById('thresh-slider').value = 15;
+      document.getElementById('thresh-val').textContent = '±15';
       selectTeam(team);
       idx = currentStates.findIndex(s => s.s === state);
     }
@@ -441,6 +438,59 @@ function switchTabDirect(tab) {
   document.getElementById('schedule-view').style.display = tab === 'schedule' ? '' : 'none';
   document.getElementById('team-view').style.display = tab === 'team' ? '' : 'none';
   document.getElementById('category-view').style.display = tab === 'category' ? '' : 'none';
+}
+
+function plotSeq(cx, cy, px, py, nx, ny) {
+  // Remove any existing sequence overlay
+  document.querySelectorAll('.seq-overlay').forEach(e => e.remove());
+  const svg = document.getElementById('pitch');
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.classList.add('seq-overlay');
+
+  const points = [
+    {x: px, y: py, label: '1'},
+    {x: cx, y: cy, label: '2'},
+    {x: nx, y: ny, label: '3'}
+  ].filter(p => p.x >= 0 && p.y >= 0);
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+  points.forEach(p => { p.cx = clamp(p.x * 10 - 0.5, 4, 116); p.cy = clamp(p.y * 10 - 0.5, 4, 76); });
+
+  // Draw arrows between consecutive points in different grid cells
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i], b = points[i+1];
+    if (a.x !== b.x || a.y !== b.y) {
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', a.cx); line.setAttribute('y1', a.cy);
+      line.setAttribute('x2', b.cx); line.setAttribute('y2', b.cy);
+      line.setAttribute('stroke', '#fff'); line.setAttribute('stroke-width', '0.8');
+      line.setAttribute('stroke-dasharray', '2,1'); line.setAttribute('opacity', '0.8');
+      line.setAttribute('marker-end', 'url(#seq-arrow)');
+      g.appendChild(line);
+    }
+  }
+
+  // Draw numbered circles
+  points.forEach(p => {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', p.cx); circle.setAttribute('cy', p.cy);
+    circle.setAttribute('r', '3'); circle.setAttribute('fill', '#e94560'); circle.setAttribute('opacity', '0.9');
+    g.appendChild(circle);
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', p.cx); text.setAttribute('y', p.cy + 1.2);
+    text.setAttribute('text-anchor', 'middle'); text.setAttribute('fill', '#fff');
+    text.setAttribute('font-size', '3.5'); text.setAttribute('font-weight', 'bold');
+    text.textContent = p.label;
+    g.appendChild(text);
+  });
+
+  svg.appendChild(g);
+}
+
+function plotSeqClick(el, cx, cy, px, py, nx, ny) {
+  document.querySelectorAll('.seq.active').forEach(e => e.classList.remove('active'));
+  el.classList.add('active');
+  plotSeq(cx, cy, px, py, nx, ny);
 }
 </script>
 </body>
