@@ -171,7 +171,6 @@ fetch('data/teams.json').then(r => r.json()).then(d => {
 });
 
 function renderSchedule(fixtures) {
-  console.log('Fixtures loaded:', fixtures.length, 'scored:', fixtures.filter(f=>f.score).length);
   window._fixtures = fixtures;
   renderScheduleList();
 }
