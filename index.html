@@ -189,17 +189,17 @@ function renderScheduleList() {
   const el = document.getElementById('schedule-list');
   const now = new Date();
 
-  // Group fixtures by date string
+  // Group fixtures by local date
   const byDate = {};
   fixtures.forEach(f => {
-    const d = f.utc.slice(0,10);
+    const d = new Date(f.utc).toLocaleDateString('en-CA'); // YYYY-MM-DD in local tz
     if (!byDate[d]) byDate[d] = [];
     byDate[d].push(f);
   });
   const dates = Object.keys(byDate).sort();
 
   // Find focus date: today if has matches, else next match day
-  const todayStr = now.toISOString().slice(0,10);
+  const todayStr = now.toLocaleDateString('en-CA');
   let focusIdx = dates.findIndex(d => d >= todayStr);
   if (focusIdx < 0) focusIdx = dates.length - 1;
 
