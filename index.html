@@ -204,10 +204,10 @@ function renderScheduleList() {
   if (focusIdx < 0) focusIdx = dates.length - 1;
 
   let html = '';
-  // Past matches (expanded)
+  // Past matches (collapsed)
   if (focusIdx > 0) {
-    html += '<div class="day-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'\':\'none\';this.textContent=this.textContent.startsWith(\'▶\')?\'▼ Past matches\':\'▶ Past matches (' + focusIdx + ' days)\'">▼ Past matches</div>';
-    html += '<div>';
+    html += '<div class="day-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'\':\'none\';this.textContent=this.textContent.startsWith(\'▶\')?\'▼ Past matches\':\'▶ Past matches (' + focusIdx + ' days)\'">▶ Past matches (' + focusIdx + ' days)</div>';
+    html += '<div style="display:none">';
     for (let i = 0; i < focusIdx; i++) html += renderDay(byDate[dates[i]], dates[i]);
     html += '</div>';
   }
