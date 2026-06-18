@@ -175,6 +175,14 @@ function renderSchedule(fixtures) {
   renderScheduleList();
 }
 
+// Auto-refresh scores every 5 minutes
+setInterval(() => {
+  fetch('data/fixtures.json?t=' + Date.now()).then(r=>r.json()).then(f => {
+    window._fixtures = f;
+    if (document.getElementById('schedule-view').style.display !== 'none') renderScheduleList();
+  }).catch(()=>{});
+}, 300000);
+
 function renderScheduleList() {
   const fixtures = window._fixtures;
   if (!fixtures) return;
@@ -200,26 +208,26 @@ function renderScheduleList() {
   if (focusIdx > 0) {
     html += '<div class="day-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'\':\'none\';this.textContent=this.textContent.startsWith(\'▶\')?\'▼ Past matches\':\'▶ Past matches ('+focusIdx+' days)\'">▶ Past matches (' + focusIdx + ' days)</div>';
     html += '<div style="display:none">';
-    for (let i = 0; i < focusIdx; i++) html += renderDay(byDate[dates[i]], dates[i], true);
+    for (let i = 0; i < focusIdx; i++) html += renderDay(byDate[dates[i]], dates[i]);
     html += '</div>';
   }
 
   // Focus day(s)
-  html += renderDay(byDate[dates[focusIdx]], dates[focusIdx], false);
+  html += renderDay(byDate[dates[focusIdx]], dates[focusIdx]);
 
   // Future matches (collapsed)
   if (focusIdx < dates.length - 1) {
     const remaining = dates.length - 1 - focusIdx;
     html += '<div class="day-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'\':\'none\';this.textContent=this.textContent.startsWith(\'▶\')?\'▼ Upcoming matches\':\'▶ Upcoming matches ('+remaining+' days)\'">▶ Upcoming matches (' + remaining + ' days)</div>';
     html += '<div style="display:none">';
-    for (let i = focusIdx + 1; i < dates.length; i++) html += renderDay(byDate[dates[i]], dates[i], false);
+    for (let i = focusIdx + 1; i < dates.length; i++) html += renderDay(byDate[dates[i]], dates[i]);
     html += '</div>';
   }
 
   el.innerHTML = html;
 }
 
-function renderDay(matches, dateStr, showScores) {
+function renderDay(matches, dateStr) {
   const d = new Date(dateStr + 'T12:00:00Z');
   const dayLabel = d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'});
   let html = '<div class="day-header">' + dayLabel + '</div>';
@@ -231,7 +239,7 @@ function renderDay(matches, dateStr, showScores) {
     const homeGplus = DATA.gplus?.[f.home];
     const awayGplus = DATA.gplus?.[f.away];
     const gpFmt = v => v == null ? '' : '<span class="gplus" style="color:'+(v>=0?'#3498db':'#e74c3c')+'">'+(v>=0?'+':'')+v.toFixed(2)+'</span>';
-    const scoreHtml = (showScores && f.score) ? '<span class="score">' + f.score + '</span>' : '<span class="vs-time">' + timeStr + '</span>';
+    const scoreHtml = f.score ? '<span class="score">' + f.score + '</span>' : '<span class="vs-time">' + timeStr + '</span>';
     html += '<div class="fixture">' +
       '<div class="team-block">' +
         '<span class="team-name' + (homeData?' has-data':'') + '" onclick="goToTeam(\'' + f.home.replace(/'/g,"\\'") + '\')">' + f.home + (homeData ? ' 📊' : '') + '</span>' +
